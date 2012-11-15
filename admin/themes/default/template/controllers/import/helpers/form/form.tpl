@@ -120,6 +120,49 @@
 
 <div class="clear">&nbsp;</div>
 
+{if $bulk}
+<div class="hint" style="display: block;">
+	
+	<div id="bulk_progress">
+		<div class="bulkhead">A bulk import is in progress...</div>
+		<div style="width: 200px; border: 1px solid #00529B; display: inline-block; border-radius: 2px; ">
+			<div style="margin: 1px; width: 0px; background-color: #0787CF; border-radius: 2px;"><div style="opacity: .25; background: url(http://www.cssdeck.com/uploads/media/items/7/7uo1osj.gif)"><span stlyle="line-height: 90%;">&nbsp;</span></div>
+		</div></div> 
+		<span></span>
+	</div>
+</div>
+<script>
+function bulkupdate() {
+	jQuery.ajax({
+		url: "{$current}&token={$token}&ajax=1&action=bulkProgress",
+		dataType: 'json',
+		success: function(data) {
+			var message = '';
+			if (! data.done) {
+				switch(data.action) {
+					case 'importing':
+						message = "{l s='Importing products...'}";
+						break;
+					case 'indexing':
+						message = "{l s='Indexing imported products...'}";
+						break;
+					case 'init':
+						message = "{l s='Starting import...'}";
+						break;
+				}
+				jQuery('#bulk_progress div.bulkhead').html(message);
+				jQuery('#bulk_progress > div > div').css('width', Math.floor(data.current/data.total*100) + '%');
+				jQuery('#bulk_progress > span').html( (data.total!=1)?(data.current + '/' + data.total):'' );
+				//if (data.current < data.total)
+				setTimeout(bulkupdate, 2000);
+			} else {
+				jQuery('#bulk_progress').html("<p>{l s='Bulk import done. For more information see log below :'}</p><iframe style='width: 100%; background-color: #C6E6F5; border: 1px solid white;' src='{$bulk_output}'></iframe>" )
+			}
+	}});
+}
+jQuery(bulkupdate);
+</script>
+{else}
 {** 
  * Import fieldset 
  *}
@@ -188,6 +231,10 @@
 			<div class="margin-form">
 				<input name="match_ref" id="match_ref" type="checkbox" style="margin-top: 6px; display:none"/>
 			</div>
+        	<label for="bulk_import" class="clear" style="display: none">{l s='Do bulk background import?'}</label>
+ 			<div class="margin-form">
+        		<input name="bulk_import" id="bulk_import" type="checkbox" style="margin-top: 6px; display:none"/>
+      		</div>
 			<label for="forceIDs" class="clear">{l s='Force all ids during import?'} </label>
 			<div class="margin-form">
 				<input name="forceIDs" id="forceIDs" type="checkbox"/> {l s='If you don\'t use this option, all IDs will be auto-incremented.'}
@@ -230,7 +277,7 @@
 	</div>
 
 </fieldset>
-		
+{/if}
 <div class="clear">&nbsp;</div>
 
 <script type="text/javascript">
@@ -274,6 +321,12 @@
 			$("label[for=forceIDs],#forceIDs").show();
 		else
 			$("label[for=forceIDs],#forceIDs").hide();
+
+		if ($('#entity > option:selected').val() == 1) {
+			$("label[for=bulk_import],#bulk_import").show();
+		} else {
+			$("label[for=bulk_import],#bulk_import").hide();
+		}
 
 		$("#entitie").html($("#entity > option:selected").text().toLowerCase());
 		$.ajax({

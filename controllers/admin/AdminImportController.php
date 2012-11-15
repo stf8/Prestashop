@@ -78,6 +78,7 @@ class AdminImportControllerCore extends AdminController
 
 	public $separator;
 	public $multiple_value_separator;
+	public $bulk_import;
 
 	public function __construct()
 	{
@@ -432,6 +433,8 @@ class AdminImportControllerCore extends AdminController
 			$this->multiple_value_separator = ',';
 		else
 			$this->multiple_value_separator = Tools::getValue('multiple_value_separator');
+		if (PHP_SAPI != 'cli') // altering the imported fields in cli mode does not make sense + we do not have the end user language anymore.
+			Hook::exec('importFields', array('controller'=> $this, 'lang' => $this->context->language->id));
 
 		parent::__construct();
 	}
@@ -478,6 +481,9 @@ class AdminImportControllerCore extends AdminController
 			'PS_ADVANCED_STOCK_MANAGEMENT' => Configuration::get('PS_ADVANCED_STOCK_MANAGEMENT'),
 		);
 
+		$bi = new BulkImport();
+		$this->tpl_form_vars['bulk'] = ($bi->running()?'progress':false);
+		$this->tpl_form_vars['bulk_output'] = $bi->getOutput();
 		return parent::renderForm();
 	}
 
@@ -507,6 +513,7 @@ class AdminImportControllerCore extends AdminController
 				'truncate' => Tools::getValue('truncate'),
 				'forceIDs' => Tools::getValue('forceIDs'),
 				'match_ref' => Tools::getValue('match_ref'),
+				'bulk_import' => Tools::getValue('bulk_import'),
 				'separator' => $this->separator,
 				'multiple_value_separator' => $this->multiple_value_separator
 			),
@@ -1018,8 +1025,10 @@ class AdminImportControllerCore extends AdminController
 		$handle = $this->openCsvFile();
 		$default_language_id = (int)Configuration::get('PS_LANG_DEFAULT');
 		AdminImportController::setLocale();
+		$bi = new BulkImport();
 		for ($current_line = 0; $line = fgetcsv($handle, MAX_LINE_SIZE, $this->separator); $current_line++)
 		{
+			$bi->set(array('current'=> $current_line+1, 'total'=> $this->csvCount, 'action'=> 'importing'));
 			if (Tools::getValue('convert'))
 				$line = $this->utf8EncodeArray($line);
 			$info = AdminImportController::getMaskedRow($line);
@@ -1461,12 +1470,15 @@ class AdminImportControllerCore extends AdminController
 			}
 			else
 				StockAvailable::setQuantity((int)$product->id, 0, $product->quantity, $this->context->shop->id);
+			Hook::exec('importProduct', array('product'=>$product, 'line' => $info));
 
 		}
 
 		if (Configuration::get('PS_SEARCH_INDEXATION'))
 			Search::indexation(true);
 
+		$bi->set(array('done'=> true));
+		$bi->show($this->warnings);
 		$this->closeCsvFile($handle);
 	}
 
@@ -2521,6 +2533,11 @@ class AdminImportControllerCore extends AdminController
 		if (!$handle)
 			$this->errors[] = Tools::displayError('Cannot read the .CSV file');
 
+		$count = 0;
+		while(fgets($handle)) $count++;
+		$this->csvCount = $count-(int)Tools::getValue('skip');
+		rewind($handle);
+
 		AdminImportController::rewindBomAware($handle);
 
 		for ($i = 0; $i < (int)Tools::getValue('skip'); ++$i)
@@ -2694,6 +2711,17 @@ class AdminImportControllerCore extends AdminController
 						$this->categoryImport();
 						break;
 					case $this->entities[$this->l('Products')]:
+						if (Tools::getValue('bulk_import')) {
+							$args = array();
+							foreach(array('skip', 'csv','convert', 'entity', 'iso_lang', 'separator', 'multiple_value_separator') as $arg) 
+								$args[] = "$arg='".Tools::getValue($arg) . "'";
+							$args[] = "type_value='".implode(';', Tools::getValue('type_value')) . "'";
+
+							$bi = new BulkImport();
+							$bi->set(array('current'=>1, 'total'=> 1, 'action'=> 'init'));
+							$bi->run(implode(' ', $args));
+							//$this->confirmations[] = $this->l('Bulk import just started...').join(',',$args);
+						}else
 						$this->productImport();
 						break;
 					case $this->entities[$this->l('Customers')]:
@@ -2782,5 +2810,13 @@ class AdminImportControllerCore extends AdminController
 			Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'import_match` WHERE `id_import_match` = '.(int)Tools::getValue('idImportMatchs'));
 			die;
 		}
+	}
+	public function ajaxProcessBulkProgress(){
+		$bi = new BulkImport();
+		die(json_encode($bi->get()));
+	}
+	public function initShopContext() {
+		if (PHP_SAPI == 'cli') return;
+		parent::initShopContext();
 	}
 }

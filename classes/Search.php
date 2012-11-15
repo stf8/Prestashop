@@ -384,15 +384,15 @@ class SearchCore
 		return $features;
 	}
 
-	protected static function getProductsToIndex($total_languages, $id_product = false, $limit = 50)
+	protected static function getProductsToIndex($total_languages, $id_product = false, $limit = 50, $count = false)
 	{
 		// Adjust the limit to get only "whole" products, in every languages (and at least one)
 		$max_possibilities = $total_languages * count(Shop::getShops(true));
 		$limit = max(1, floor($limit / $max_possibilities) * $max_possibilities);
 
 		return Db::getInstance()->executeS('
-			SELECT p.id_product, pl.id_lang, pl.id_shop, pl.name pname, p.reference, p.ean13, p.upc,
-				pl.description_short, pl.description, cl.name cname, m.name mname
+			SELECT '.($count?'count(p.id_product)':'p.id_product, pl.id_lang, pl.id_shop, pl.name pname, p.reference, p.ean13, p.upc,
+				pl.description_short, pl.description, cl.name cname, m.name mname').'
 			FROM '._DB_PREFIX_.'product p
 			LEFT JOIN '._DB_PREFIX_.'product_lang pl
 				ON p.id_product = pl.id_product
@@ -403,8 +403,8 @@ class SearchCore
 				ON m.id_manufacturer = p.id_manufacturer
 			WHERE product_shop.indexed = 0
 			AND product_shop.visibility IN ("both", "search")
-			'.($id_product ? 'AND p.id_product = '.(int)$id_product : '').'
-			LIMIT '.(int)$limit
+			'.($id_product ? 'AND p.id_product = '.(int)$id_product : '').($count?'':(
+			'LIMIT '.(int)$limit))
 		);
 	}
 
@@ -475,12 +475,21 @@ class SearchCore
 		// Retrieve the number of languages
 		$total_languages = count(Language::getLanguages(false));
 
+		if (PHP_SAPI=="cli") {
+			$product_count = array_shift(array_shift(Search::getProductsToIndex($total_languages, $id_product, 50, true)));
+			$current = 0;
+			$bi = new BulkImport();
+		}
 		// Products are processed 50 by 50 in order to avoid overloading MySQL
 		while (($products = Search::getProductsToIndex($total_languages, $id_product, 50)) && (count($products) > 0))
 		{
 			// Now each non-indexed product is processed one by one, langage by langage
 			foreach ($products as $product)
 			{
+				if (PHP_SAPI == 'cli') {
+					$current++;
+					$bi->set(array('current'=> $current, 'total'=> $product_count, 'action' => 'indexing'));
+				}
 				$product['tags'] = Search::getTags($db, (int)$product['id_product'], (int)$product['id_lang']);
 				$product['attributes'] = Search::getAttributes($db, (int)$product['id_product'], (int)$product['id_lang']);
 				$product['features'] = Search::getFeatures($db, (int)$product['id_product'], (int)$product['id_lang']);
