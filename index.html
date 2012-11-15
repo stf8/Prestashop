@@ -41,15 +41,50 @@
       <section>
         <h1>Addons for Prestashop</h1>
 
-<p>This fork support small addons to <a href="http://www.prestashop.com">Prestashop</a> :</p>
+<p>This fork supports small addons to <a href="http://www.prestashop.com">Prestashop</a> :</p>
 
 <ul>
-<li>new hooks in the backoffice product page</li>
+<li>new hooks in the backoffice import controller;</li>
 <li>background bulk CSV import.</li>
-</ul><p>If you don't already have your very own Prestashop running then you can get an already patched Prestashop by clicking the links at top of the page.</p>
+</ul><h2>How to apply</h2>
 
-<p>Alternatively you can apply a single patch to your 1.5.2 tree (only this release is provided).
-    prestashop$ patch -p1 &lt; /x/y/z/where/is/the/patch.file</p>
+<p>If you don't already have your very own Prestashop running then you can get a patched Prestashop by clicking the links at top of the page.</p>
+
+<p>Alternatively you can apply a <a href="https://github.com/stf8/Prestashop/commit/22cebb8c682cbe3cd227766ecc5e86517439a123.patch">single patch</a> to your 1.5.2 tree (only this release is provided).</p>
+
+<pre><code>prestashop$ patch -p1 &lt; /x/y/z/where/is/the/patch.file
+</code></pre>
+
+<h2>Features</h2>
+
+<h3>Bulk import</h3>
+
+<p>This video shows a product import :</p>
+
+<h3>Additional import fields</h3>
+
+<p>The new hook <code>importFields</code> allows a modification of the supported import fields...  It is typically used by a 'dimensions' module that adds the ability to define true custom dimensions for any product in Prestashop (soon to be publish on GitHub).</p>
+
+<h2>Special notes</h2>
+
+<p>I didn't use override since most of modification occurs in the middle of pretty critical methods this would have lead to duplicate most of those methods. </p>
+
+<p>There is one recurrent problem in using overrides : array defininition in methods (e.g. render_form). Most of time you will see :</p>
+
+<pre><code>$this-&gt;an_array = array( 'x' =&gt; 'y');
+</code></pre>
+
+<p>While one should expect a way to merge a possible predefined array (typically from within the override) :</p>
+
+<pre><code>public function render_form() {
+  $this-&gt;an_array = array( 'foo' =&gt; 'bar' );
+  parent::render_form();
+}
+</code></pre>
+
+<p>Whatever, the patch is pretty easy to apply.</p>
+
+<hr><p>Feel free to contact me.</p>
       </section>
       <footer>
         <p>Project maintained by <a href="https://github.com/stf8">stf8</a></p>
