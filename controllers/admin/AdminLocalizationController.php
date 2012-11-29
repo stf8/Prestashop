@@ -91,10 +91,17 @@ class AdminLocalizationControllerCore extends AdminController
 					'PS_VOLUME_UNIT' => array(
 						'title' => $this->l('Volume unit:'),
 						'desc' => $this->l('The default volume unit for your shop'),
-						'validation' => 'isWeightUnit',
+						'validation' => 'isVolumeUnit',
 						'required' => true,
 						'type' => 'text'
 					),
+          'PS_SURFACE_UNIT' => array(
+            'title' => $this->l('Surface unit:'),
+            'desc' => $this->l('The default surface unit for your shop'),
+            'validation' => 'isSurfaceUnit',
+            'required' => true,
+            'type' => 'text'
+          ),
 					'PS_DIMENSION_UNIT' => array(
 						'title' => $this->l('Dimension unit:'),
 						'desc' => $this->l('The default dimension unit for your shop (e.g. cm or in)'),

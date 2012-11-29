@@ -791,6 +791,14 @@ class ValidateCore
 		return preg_match('/^[a-zA-Z]{1,3}$/', $unit);
 	}
 
+	public static function isVolumeUnit($unit) {
+    return preg_match('/^[a-zA-Z3]{1,3}$/', $unit);
+	}
+
+	public static function isSurfaceUnit($unit) {
+    return preg_match('/^[a-zA-Z2]{1,3}$/', $unit);
+  }
+
 	public static function isDistanceUnit($unit)
 	{
 		return preg_match('/^[a-zA-Z]{1,2}$/', $unit);
