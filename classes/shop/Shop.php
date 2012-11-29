@@ -178,6 +178,8 @@ class ShopCore extends ObjectModel
 			'zone' => array('type' => 'shop'),
 			'manufacturer' => array('type' => 'shop'),
 			'supplier' => array('type' => 'shop'),
+			'businessrecords' => array('type'=> 'shop'),
+			'dimensions' => array('type' => 'shop')
 		);
 		Shop::$initialized = true;
 	}
