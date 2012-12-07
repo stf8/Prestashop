@@ -1478,7 +1478,7 @@ class AdminImportControllerCore extends AdminController
 			Search::indexation(true);
 
 		$bi->set(array('done'=> true));
-		$bi->show($this->warnings);
+		$bi->show(array($this->errors, $this->warnings));
 		$this->closeCsvFile($handle);
 	}
 
